@@ -1,3 +1,4 @@
+import datetime
 import json
 import sys
 import smtplib
@@ -7,6 +8,9 @@ from senec import Senec
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
+
+# when this script was called in format YYYYmmdd_HHMMSS
+now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 #read config.json
 with open('config.json') as config_file:
@@ -18,6 +22,13 @@ if not api:
   sys.exit
 data=api.get_values()
 
+#init outputfile
+def getOutputFile():
+  if config['prependtimestamp']:
+    return now+"_"+config['outputfile']
+  else:
+    return config['outputfile']
+
 #init mail
 if config['mail_enabled']:
   smtpObj = smtplib.SMTP(config['mail_server'],config['mail_port']) 
@@ -27,9 +38,9 @@ if config['mail_enabled']:
 
 #delete output file
 try:
-  os.remove(config['outputfile'])
+  os.remove(getOutputFile())
 except OSError as e:
-  print("Error deleting"+config['outputfile'])
+  print("Error deleting "+getOutputFile())
   print(e)
   print("")
 
@@ -39,9 +50,9 @@ def writeValue(x):
     print(x)
 
   #ausgabe in datei
-  outputfile=config['outputfile']
+  outputfile=getOutputFile()
   if len(outputfile)>0:
-    f = open(config['outputfile'], mode='a', encoding='utf-8')
+    f = open(outputfile, mode='a', encoding='utf-8')
     f.write(x+"\n")
     f.close()
 
@@ -69,7 +80,7 @@ def send_mail(body):
   msg['To'] = config['mail_to']
   msgText = MIMEText('<b>%s</b>' % (body), 'html')
   msg.attach(msgText)
-  outputfile=config['outputfile']
+  outputfile=getOutputFile()
   if len(outputfile)>0:
     msg.attach(MIMEText(open(outputfile).read()))
     try:
@@ -84,6 +95,9 @@ def send_mail(body):
 #reset alarmflag
 alarm=False
 
+writeValue("Zeitstempel         : {0}".format(now))
+
+writeValue("")
 writeValue("Geraeteinformationen")
 writeValue("Aktueller Status    : {0}".format(data["STATISTIC"]['CURRENT_STATE']))
 writeValue("Kapazitaet          : {0}".format(data["FACTORY"]['DESIGN_CAPACITY']))
